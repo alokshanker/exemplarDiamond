@@ -162,6 +162,7 @@ for i = 1:length(ordering)
     else
       scores = [];
     end
+    scores
     [aa,bb] = max(scores);
     fprintf(1,' took %.3fsec, maxhit=%.3f, #hits=%d\n',...
             toc(starter),aa,length(scores));
@@ -176,8 +177,8 @@ for i = 1:length(ordering)
       coarse_boxes = coarse_boxes(goods,:);
     end
 
-   app_files = coarse_boxes;
-    allfiles
+    app_files = coarse_boxes;
+    app_files
     if display == 1       
       %extract detection box vectors from the localization results
       saveboxes = boxes;

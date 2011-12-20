@@ -76,21 +76,26 @@ for ii=1:length(cls)
     test_set = cell(1,1);
     imwrite(img, 'temp.bmp');
     test_set{1} = 'temp.bmp';
+    test_set
     app_files = apply_all_exemplars(dataset_params, models, test_set, 'rephoto_test', [],...
         test_params);
     %result = load(app_files{ii});
  
    % grid = result.res{ii}.coarse_boxes;
    app_files
+   if(length(app_files))
+       
     mygrid = app_files(:,end);
     length(mygrid)
    
     if(length(mygrid) == 0)
         score = 0;
     else 
-        score = max(mygrid);
+        score = abs(max(mygrid));
     end  
-    score
+   else 
+      score = 0;
+   end 
     
 end
 
