@@ -1,0 +1,88 @@
+function grid = load_result_grid_sketch(dataset_params,models,setname,files,curthresh)
+%Given a set of models, return a grid of results from those models' firings
+%on the subset of images (target_directory is 'trainval' or 'test')
+%[curthresh]: only keep detections above this number (-1.1 for
+%esvm, .5 for vis-reg)
+%Tomasz Malisiewicz (tomasz@cmu.edu)
+
+setname = [setname '.' models{1}.cls];
+
+final_file = sprintf('%s/applied/%s-%s.mat',dataset_params.localdir,setname, ...
+                     models{1}.models_name);
+lockfile = [final_file '.lock'];
+
+if fileexists(final_file) || (mymkdir_dist(lockfile)==0)
+  wait_until_all_present({lockfile},5,1);
+  fprintf(1,'Loading final file %s\n',final_file);
+  while 1
+    try
+      load(final_file);
+      break;
+    catch
+      fprintf(1,'cannot load, sleeping for 5, trying again\n');
+      pause(5);
+    end
+  end
+  return;
+end
+
+%if we got here, then the final file isn't there, and we were able
+%to write a lock file successfully
+
+baser = sprintf('%s/applied/%s-%s/',dataset_params.localdir,setname, ...
+                models{1}.models_name);
+fprintf(1,'base directory: %s\n',baser);
+
+%with the dir command partial results could be loaded 
+fl = dir([baser 'result*mat']);
+aa = struct2cell(fl);
+aa = aa(1,:);
+files = cellfun(@(x) [baser x], aa,'UniformOutput',false);
+grid = cell(1,length(files));
+
+for i = 1:length(files)
+  if mod(i,100) == 0
+    fprintf(1,'%d/%d\n',i,length(files));
+  end
+  
+  %filer = sprintf('%s/%s', ...
+  %                baser,files(i).name);
+  filer = files{i};
+  stuff = load(filer);
+  grid{i} = stuff;
+
+  for j = 1:length(grid{i}.res)
+    index = grid{i}.res{j}.index;
+    if size(grid{i}.res{j}.bboxes,1) > 0
+      grid{i}.res{j}.bboxes(:,11) = index;
+      grid{i}.res{j}.coarse_boxes(:,11) = index;
+    end
+  end
+end
+keyboard
+%Prune away files which didn't load
+lens = cellfun(@(x)length(x),grid);
+grid = grid(lens>0);
+grid = cellfun2(@(x)x.res,grid);
+grid2 = grid;
+grid = [grid2{:}];
+
+if length(grid) > 0
+  
+  %sort grids by image index
+  [aa,bb] = sort(cellfun(@(x)x.index,grid));
+  grid = grid(bb);
+  
+  %only keep grids with at least one detection
+  lens = cellfun(@(x)size(x.bboxes,1),grid);
+  grid = grid(lens>0);
+end
+
+%if fileexists(final_file) || (mymkdir_dist(lockfile) == 0)
+%  wait_until_all_present({final_file},5);
+%  return;
+%else
+save(final_file,'grid', '-v7.3');
+if exist(lockfile,'dir')
+  rmdir(lockfile);
+end
